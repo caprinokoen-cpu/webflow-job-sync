@@ -1,0 +1,27 @@
+name: Sync Webflow Jobs
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run cleanup script
+        run: node delete-missing-webflow-jobs.js
+        env:
+          WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
+          WEBFLOW_COLLECTION_ID: ${{ secrets.WEBFLOW_COLLECTION_ID }}
+          WEBFLOW_JOB_ID_FIELD: ${{ secrets.WEBFLOW_JOB_ID_FIELD }}
+          SOURCE_API_KEY: ${{ secrets.SOURCE_API_KEY }}
