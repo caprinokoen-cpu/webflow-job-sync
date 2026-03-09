@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run cleanup script
+      - name: Cleanup jobs
         run: node delete-missing-webflow-jobs.js
         env:
           WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
@@ -26,3 +26,12 @@ jobs:
           WEBFLOW_JOB_ID_FIELD: ${{ secrets.WEBFLOW_JOB_ID_FIELD }}
           WEBFLOW_SITE_ID: ${{ secrets.WEBFLOW_SITE_ID }}
           SOURCE_API_KEY: ${{ secrets.SOURCE_API_KEY }}
+          WEBFLOW_CITY_COLLECTION_ID: ${{ secrets.WEBFLOW_CITY_COLLECTION_ID }}
+
+      - name: Sync cities
+        run: node sync-webflow-cities.js
+        env:
+          WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
+          WEBFLOW_SITE_ID: ${{ secrets.WEBFLOW_SITE_ID }}
+          SOURCE_API_KEY: ${{ secrets.SOURCE_API_KEY }}
+          WEBFLOW_CITY_COLLECTION_ID: ${{ secrets.WEBFLOW_CITY_COLLECTION_ID }}
