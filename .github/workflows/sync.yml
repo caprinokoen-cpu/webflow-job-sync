@@ -21,7 +21,8 @@ jobs:
       - name: Run cleanup script
         run: node delete-missing-webflow-jobs.js
         env:
-          WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
-          WEBFLOW_COLLECTION_ID: ${{ secrets.WEBFLOW_COLLECTION_ID }}
-          WEBFLOW_JOB_ID_FIELD: ${{ secrets.WEBFLOW_JOB_ID_FIELD }}
-          SOURCE_API_KEY: ${{ secrets.SOURCE_API_KEY }}
+            WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
+            WEBFLOW_COLLECTION_ID: ${{ secrets.WEBFLOW_COLLECTION_ID }}
+            WEBFLOW_JOB_ID_FIELD: ${{ secrets.WEBFLOW_JOB_ID_FIELD }}
+            WEBFLOW_SITE_ID: ${{ secrets.WEBFLOW_SITE_ID }}
+            SOURCE_API_KEY: ${{ secrets.SOURCE_API_KEY }}
