@@ -6,6 +6,7 @@ const SOURCE_API_BASE =
 const WEBFLOW_TOKEN = process.env.WEBFLOW_TOKEN;
 const WEBFLOW_COLLECTION_ID = process.env.WEBFLOW_COLLECTION_ID;
 const WEBFLOW_JOB_ID_FIELD = process.env.WEBFLOW_JOB_ID_FIELD;
+const WEBFLOW_SITE_ID = process.env.WEBFLOW_SITE_ID;
 const SOURCE_API_KEY = process.env.SOURCE_API_KEY;
 
 const INTERNAL_CHANNEL = "Company website";
@@ -103,7 +104,24 @@ async function deleteWebflowItem(itemId) {
     throw new Error(`Delete failed: ${text}`);
   }
 }
+async function publishWebflowSite() {
+  const url = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/publish`;
 
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${WEBFLOW_TOKEN}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Publish failed: ${text}`);
+  }
+}
 async function main() {
   console.log("Fetching source jobs...");
 
@@ -146,6 +164,12 @@ async function main() {
   }
 
   console.log("Cleanup finished.");
+
+  if (toDelete.length > 0) {
+    console.log("Publishing Webflow site...");
+    await publishWebflowSite();
+    console.log("Publish finished.");
+  }
 }
 
 main().catch((err) => {
