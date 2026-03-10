@@ -96,6 +96,7 @@ async function deleteWebflowItem(itemId) {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${WEBFLOW_TOKEN}`,
+      Accept: "application/json",
     },
   });
 
@@ -104,17 +105,41 @@ async function deleteWebflowItem(itemId) {
     throw new Error(`Delete failed: ${text}`);
   }
 }
-async function publishWebflowSite() {
-  const url = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/publish`;
 
-  const res = await fetch(url, {
+async function publishWebflowSite() {
+  const domainsUrl = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/custom_domains`;
+
+  const domainsData = await fetchJson(domainsUrl, {
+    headers: {
+      Authorization: `Bearer ${WEBFLOW_TOKEN}`,
+      Accept: "application/json",
+    },
+  });
+
+  const domainIds = (domainsData.customDomains || [])
+    .map((domain) => domain.id)
+    .filter(Boolean);
+
+  console.log("Domains response:", JSON.stringify(domainsData, null, 2));
+  console.log("Domain IDs:", domainIds);
+
+  if (domainIds.length === 0) {
+    throw new Error("No valid Webflow domain IDs found for publish.");
+  }
+
+  const publishUrl = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/publish`;
+
+  const res = await fetch(publishUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${WEBFLOW_TOKEN}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      customDomains: domainIds,
+      publishToWebflowSubdomain: true,
+    }),
   });
 
   if (!res.ok) {
@@ -122,6 +147,7 @@ async function publishWebflowSite() {
     throw new Error(`Publish failed: ${text}`);
   }
 }
+
 async function main() {
   console.log("Fetching source jobs...");
 
@@ -157,9 +183,7 @@ async function main() {
 
   for (const item of toDelete) {
     console.log(`Deleting: ${item.name} (${item.jobId})`);
-
     await deleteWebflowItem(item.id);
-
     await sleep(250);
   }
 
