@@ -49,7 +49,7 @@ function extractCities(jobs) {
   for (const job of jobs) {
     const city = job?.job?.byner__Job_location__c;
 
-    if (city) {
+    if (city && city.trim()) {
       cities.add(city.trim());
     }
   }
@@ -86,8 +86,18 @@ async function fetchWebflowCities() {
   return items;
 }
 
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 async function createCity(name) {
-  const slug = name.toLowerCase().replace(/\s+/g, "-");
+  const slug = slugify(name);
 
   const url = `${WEBFLOW_API_BASE}/collections/${WEBFLOW_CITY_COLLECTION_ID}/items`;
 
@@ -100,8 +110,8 @@ async function createCity(name) {
     },
     body: JSON.stringify({
       fieldData: {
-        name: name,
-        slug: slug,
+        name,
+        slug,
       },
     }),
   });
@@ -114,6 +124,7 @@ async function deleteCity(id) {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${WEBFLOW_TOKEN}`,
+      Accept: "application/json",
     },
   });
 
@@ -124,16 +135,39 @@ async function deleteCity(id) {
 }
 
 async function publishWebflowSite() {
-  const url = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/publish`;
+  const domainsUrl = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/custom_domains`;
 
-  const res = await fetch(url, {
+  const domainsData = await fetchJson(domainsUrl, {
+    headers: {
+      Authorization: `Bearer ${WEBFLOW_TOKEN}`,
+      Accept: "application/json",
+    },
+  });
+
+  const domainIds = (domainsData.customDomains || [])
+    .map((domain) => domain.id)
+    .filter(Boolean);
+
+  console.log("Domains response:", JSON.stringify(domainsData, null, 2));
+  console.log("Domain IDs:", domainIds);
+
+  if (domainIds.length === 0) {
+    throw new Error("No valid Webflow domain IDs found for publish.");
+  }
+
+  const publishUrl = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/publish`;
+
+  const res = await fetch(publishUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${WEBFLOW_TOKEN}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      customDomains: domainIds,
+      publishToWebflowSubdomain: true,
+    }),
   });
 
   if (!res.ok) {
@@ -151,7 +185,6 @@ async function main() {
   console.log("Cities from API:", cities.size);
 
   const webflowCities = await fetchWebflowCities();
-
   const existing = new Map();
 
   for (const city of webflowCities) {
