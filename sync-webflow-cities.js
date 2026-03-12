@@ -213,10 +213,13 @@ async function main() {
   }
 
   if (changes) {
-    console.log("Publishing site...");
-    await publishWebflowSite();
-    console.log("Publish finished.");
-  }
+  console.log("Waiting before publish...");
+  await new Promise(resolve => setTimeout(resolve, 5000));
+
+  console.log("Publishing site...");
+  await publishWebflowSite();
+  console.log("Publish finished.");
+}
 
   console.log("City sync finished.");
 }
