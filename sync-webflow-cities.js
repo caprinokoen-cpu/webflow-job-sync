@@ -10,15 +10,49 @@ const SOURCE_API_KEY = process.env.SOURCE_API_KEY;
 
 const INTERNAL_CHANNEL = "Company website";
 
-async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options);
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HTTP ${res.status}: ${text}`);
+async function fetchJson(url, options = {}, retries = 5, baseDelay = 10000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const res = await fetch(url, options);
+
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * attempt;
+      console.log(`Rate limited (429). Waiting ${waitMs / 1000}s before retry ${attempt}/${retries}...`);
+      await sleep(waitMs);
+      continue;
+    }
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    return res.json();
   }
 
-  return res.json();
+  throw new Error(`Failed after ${retries} retries due to rate limiting.`);
+}
+
+async function fetchWithRetry(url, options = {}, retries = 5, baseDelay = 10000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const res = await fetch(url, options);
+
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * attempt;
+      console.log(`Rate limited (429). Waiting ${waitMs / 1000}s before retry ${attempt}/${retries}...`);
+      await sleep(waitMs);
+      continue;
+    }
+
+    return res;
+  }
+
+  throw new Error(`Failed after ${retries} retries due to rate limiting.`);
 }
 
 async function fetchAllJobs() {
@@ -31,7 +65,6 @@ async function fetchAllJobs() {
       `&start=${start}&apiKey=${encodeURIComponent(SOURCE_API_KEY)}`;
 
     const data = await fetchJson(url);
-
     const results = data.results || [];
 
     if (results.length === 0) break;
@@ -120,7 +153,7 @@ async function createCity(name) {
 async function deleteCity(id) {
   const url = `${WEBFLOW_API_BASE}/collections/${WEBFLOW_CITY_COLLECTION_ID}/items/${id}`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${WEBFLOW_TOKEN}`,
@@ -157,7 +190,7 @@ async function publishWebflowSite() {
 
   const publishUrl = `${WEBFLOW_API_BASE}/sites/${WEBFLOW_SITE_ID}/publish`;
 
-  const res = await fetch(publishUrl, {
+  const res = await fetchWithRetry(publishUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${WEBFLOW_TOKEN}`,
@@ -213,13 +246,13 @@ async function main() {
   }
 
   if (changes) {
-  console.log("Waiting before publish...");
-  await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log("Waiting before publish...");
+    await sleep(10000);
 
-  console.log("Publishing site...");
-  await publishWebflowSite();
-  console.log("Publish finished.");
-}
+    console.log("Publishing site...");
+    await publishWebflowSite();
+    console.log("Publish finished.");
+  }
 
   console.log("City sync finished.");
 }
